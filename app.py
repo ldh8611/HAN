@@ -124,21 +124,33 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
         box-sizing:border-box;
     }}
 
+    .header-wrap {{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+    }}
+
     .title {{
         font-size:24px;
         font-weight:bold;
-        margin-bottom:5px;
     }}
 
     .summary {{
         font-size:22px;
         font-weight:bold;
+        margin-top:5px;
         margin-bottom:10px;
     }}
 
     .blue {{ color:#007bff; }}
     .orange {{ color:#f0ad4e; }}
     .red {{ color:#d9534f; }}
+
+    .header-right img {{
+        width:160px;
+        border:1px solid #ccc;
+        padding:3px;
+    }}
 
     .header {{
         background:#bfe3e6;
@@ -172,31 +184,31 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
         margin-top:10px;
         line-height:1.6;
     }}
-
-    .card-wrap {{
-        text-align:right;
-        margin-top:10px;
-    }}
-
-    .card-img {{
-        width:180px;
-    }}
     </style>
     </head>
 
     <body>
 
-    <div class="title">한장으로 보는 보장현황</div>
-    <div>{name} / 월보험료 {premium:,}원 (단위: 만원)</div>
+    <div class="header-wrap">
 
-    <div class="summary">
-        <span class="blue">● {good}</span>
-        &nbsp;
-        <span class="orange">▲ {mid}</span>
-        &nbsp;
-        <span class="red">✖ {bad}</span>
-    </div>
+        <div>
+            <div class="title">한장으로 보는 보장현황</div>
+            <div>{name} / 월보험료 {premium:,}원 (단위: 만원)</div>
+
+            <div class="summary">
+                <span class="blue">● {good}</span>
+                <span class="orange">▲ {mid}</span>
+                <span class="red">✖ {bad}</span>
+            </div>
+        </div>
+
+        <div class="header-right">
     """
+
+    if image_base64:
+        html += f"<img src='data:image/png;base64,{image_base64}'/>"
+
+    html += "</div></div>"
 
     for cat, items in results_by_cat.items():
 
@@ -206,7 +218,7 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
         html += "<tr><td class='left'>보장</td>" + "".join([f"<td>{r['내 금액']:,}</td>" for r in items]) + "</tr>"
         html += "<tr><td class='left'>기준금액</td>" + "".join([f"<td>{r['기준 금액']:,}</td>" for r in items]) + "</tr>"
         html += "<tr><td class='left'>적정도</td>" + "".join([
-            f"<td style='color:{'#007bff' if r['적정도']=='●' else '#f0ad4e' if r['적정도']=='▲' else '#d9534f'}; font-size:16px; font-weight:bold'>{r['적정도']}</td>"
+            f"<td style='color:{'#007bff' if r['적정도']=='●' else '#f0ad4e' if r['적정도']=='▲' else '#d9534f'}; font-size:18px; font-weight:bold'>{r['적정도']}</td>"
             for r in items]) + "</tr>"
 
         html += "</table>"
@@ -220,13 +232,6 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
     {formatted_opinion}
     </div>
     """
-
-    if image_base64:
-        html += f"""
-        <div class="card-wrap">
-            <img class='card-img' src='data:image/png;base64,{image_base64}'/>
-        </div>
-        """
 
     html += "</body></html>"
 

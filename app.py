@@ -1,5 +1,4 @@
 import streamlit as st
-import pdfkit
 import base64
 
 st.set_page_config(layout="wide")
@@ -104,7 +103,6 @@ def image_to_base64(uploaded_file):
 
 def generate_html(results_by_cat, name, premium, opinion, image_base64):
 
-    # 🔥 줄바꿈 처리 핵심
     formatted_opinion = opinion.replace("\n", "<br>")
 
     all_items = sum(results_by_cat.values(), [])
@@ -118,53 +116,20 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
     body {{ font-family:'Malgun Gothic'; position:relative; }}
     .title {{ font-size:24px; font-weight:bold; }}
 
-    .summary {{
-        font-size:22px;
-        font-weight:bold;
-        margin-top:5px;
-    }}
-
+    .summary {{ font-size:22px; font-weight:bold; margin-top:5px; }}
     .blue {{ color:#007bff; }}
     .orange {{ color:#f0ad4e; }}
     .red {{ color:#d9534f; }}
 
-    .header {{
-        background:#bfe3e6;
-        padding:6px;
-        font-weight:bold;
-    }}
+    .header {{ background:#bfe3e6; padding:6px; font-weight:bold; }}
 
-    table {{
-        width:100%;
-        border-collapse:collapse;
-        table-layout:fixed;
-    }}
+    table {{ width:100%; border-collapse:collapse; table-layout:fixed; }}
+    th, td {{ border:1px solid #ccc; font-size:11px; text-align:center; padding:4px; }}
+    .left {{ background:#f0f0f0; font-weight:bold; }}
 
-    th, td {{
-        border:1px solid #ccc;
-        font-size:11px;
-        text-align:center;
-        padding:4px;
-    }}
+    .opinion {{ border:1px solid #ccc; padding:10px; margin-top:20px; line-height:1.6; }}
 
-    .left {{
-        background:#f0f0f0;
-        font-weight:bold;
-    }}
-
-    .opinion {{
-        border:1px solid #ccc;
-        padding:10px;
-        margin-top:20px;
-        line-height:1.6;
-    }}
-
-    .card-img {{
-        position:absolute;
-        bottom:20px;
-        right:20px;
-        width:200px;
-    }}
+    .card-img {{ position:absolute; bottom:20px; right:20px; width:200px; }}
     </style>
     </head><body>
 
@@ -173,9 +138,7 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
 
     <div class="summary">
         <span class="blue">● {good}</span>
-        &nbsp;&nbsp;
         <span class="orange">▲ {mid}</span>
-        &nbsp;&nbsp;
         <span class="red">✖ {bad}</span>
     </div>
     """
@@ -194,13 +157,8 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
         html += "</table><br>"
 
         if cat == "실손/기타":
-            html += """
-            <div style='font-size:10px; margin-bottom:10px;'>
-            ※ 기준금액은 현재 나이에 필요한 권장 보장금액입니다 (단위: 만원)
-            </div>
-            """
+            html += "<div style='font-size:10px;'>※ 기준금액은 현재 나이에 필요한 권장 보장금액입니다 (단위: 만원)</div>"
 
-    # 설계사 의견
     html += f"""
     <div class="opinion">
     <b>설계사 의견</b><br><br>
@@ -208,7 +166,6 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
     </div>
     """
 
-    # 명함
     if image_base64:
         html += f"<img class='card-img' src='data:image/png;base64,{image_base64}'/>"
 
@@ -222,7 +179,6 @@ if st.button("📊 분석하기"):
 
     for cat, items in categories.items():
         results_by_cat[cat] = []
-
         for item in items:
             results_by_cat[cat].append({
                 "항목":item,
@@ -232,14 +188,13 @@ if st.button("📊 분석하기"):
             })
 
     img_base64 = image_to_base64(uploaded_file)
-
     html = generate_html(results_by_cat, customer_name, monthly_premium, opinion, img_base64)
 
-    config = pdfkit.configuration(
-        wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+    # ✅ HTML 다운로드 (배포용 핵심)
+    st.download_button(
+        "📄 리포트 다운로드",
+        html,
+        file_name="보험보장리포트.html"
     )
 
-    pdfkit.from_string(html, "report.pdf", configuration=config)
-
-    with open("report.pdf","rb") as f:
-        st.download_button("📄 PDF 다운로드", f, "보험보장리포트.pdf")
+    st.success("다운로드 후 'Ctrl + P → PDF 저장' 하시면 됩니다 👍")

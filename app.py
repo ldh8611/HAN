@@ -111,34 +111,89 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
     bad = sum(1 for r in all_items if r["적정도"]=="✖")
 
     html = f"""
-    <html><head><meta charset="utf-8">
+    <html>
+    <head>
+    <meta charset="utf-8">
     <style>
-    body {{ font-family:'Malgun Gothic'; position:relative; }}
-    .title {{ font-size:24px; font-weight:bold; }}
+    body {{
+        font-family:'Malgun Gothic';
+        width:210mm;
+        height:297mm;
+        margin:0 auto;
+        padding:20px;
+        box-sizing:border-box;
+    }}
 
-    .summary {{ font-size:22px; font-weight:bold; margin-top:5px; }}
+    .title {{
+        font-size:24px;
+        font-weight:bold;
+        margin-bottom:5px;
+    }}
+
+    .summary {{
+        font-size:22px;
+        font-weight:bold;
+        margin-bottom:10px;
+    }}
+
     .blue {{ color:#007bff; }}
     .orange {{ color:#f0ad4e; }}
     .red {{ color:#d9534f; }}
 
-    .header {{ background:#bfe3e6; padding:6px; font-weight:bold; }}
+    .header {{
+        background:#bfe3e6;
+        padding:6px;
+        font-weight:bold;
+        margin-top:8px;
+    }}
 
-    table {{ width:100%; border-collapse:collapse; table-layout:fixed; }}
-    th, td {{ border:1px solid #ccc; font-size:11px; text-align:center; padding:4px; }}
-    .left {{ background:#f0f0f0; font-weight:bold; }}
+    table {{
+        width:100%;
+        border-collapse:collapse;
+        table-layout:fixed;
+        margin-bottom:5px;
+    }}
 
-    .opinion {{ border:1px solid #ccc; padding:10px; margin-top:20px; line-height:1.6; }}
+    th, td {{
+        border:1px solid #ccc;
+        font-size:11px;
+        text-align:center;
+        padding:4px;
+    }}
 
-    .card-img {{ position:absolute; bottom:20px; right:20px; width:200px; }}
+    .left {{
+        background:#f0f0f0;
+        font-weight:bold;
+    }}
+
+    .opinion {{
+        border:1px solid #ccc;
+        padding:10px;
+        margin-top:10px;
+        line-height:1.6;
+    }}
+
+    .card-wrap {{
+        text-align:right;
+        margin-top:10px;
+    }}
+
+    .card-img {{
+        width:180px;
+    }}
     </style>
-    </head><body>
+    </head>
+
+    <body>
 
     <div class="title">한장으로 보는 보장현황</div>
     <div>{name} / 월보험료 {premium:,}원 (단위: 만원)</div>
 
     <div class="summary">
         <span class="blue">● {good}</span>
+        &nbsp;
         <span class="orange">▲ {mid}</span>
+        &nbsp;
         <span class="red">✖ {bad}</span>
     </div>
     """
@@ -154,7 +209,7 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
             f"<td style='color:{'#007bff' if r['적정도']=='●' else '#f0ad4e' if r['적정도']=='▲' else '#d9534f'}; font-size:16px; font-weight:bold'>{r['적정도']}</td>"
             for r in items]) + "</tr>"
 
-        html += "</table><br>"
+        html += "</table>"
 
         if cat == "실손/기타":
             html += "<div style='font-size:10px;'>※ 기준금액은 현재 나이에 필요한 권장 보장금액입니다 (단위: 만원)</div>"
@@ -167,9 +222,14 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
     """
 
     if image_base64:
-        html += f"<img class='card-img' src='data:image/png;base64,{image_base64}'/>"
+        html += f"""
+        <div class="card-wrap">
+            <img class='card-img' src='data:image/png;base64,{image_base64}'/>
+        </div>
+        """
 
     html += "</body></html>"
+
     return html
 
 # 실행
@@ -190,11 +250,6 @@ if st.button("📊 분석하기"):
     img_base64 = image_to_base64(uploaded_file)
     html = generate_html(results_by_cat, customer_name, monthly_premium, opinion, img_base64)
 
-    # ✅ HTML 다운로드 (배포용 핵심)
-    st.download_button(
-        "📄 리포트 다운로드",
-        html,
-        file_name="보험보장리포트.html"
-    )
+    st.download_button("📄 리포트 다운로드", html, file_name="보험보장리포트.html")
 
-    st.success("다운로드 후 'Ctrl + P → PDF 저장' 하시면 됩니다 👍")
+    st.success("다운로드 후 Ctrl+P → PDF 저장하시면 완성입니다 👍")

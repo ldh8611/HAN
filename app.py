@@ -124,6 +124,16 @@ def make_html(results,name,birth,premium,opinion,img):
     th {{background:#eef2f7}}
     .left {{background:#f7f7f7;font-weight:bold}}
     img {{width:150px;border-radius:8px}}
+
+    .notice {{
+        margin-top:20px;
+        font-size:11px;
+        color:#666;
+        background:#fff3cd;
+        padding:10px;
+        border-radius:8px;
+        line-height:1.6;
+    }}
     </style>
     </head>
 
@@ -160,6 +170,16 @@ def make_html(results,name,birth,premium,opinion,img):
         html+="</table></div>"
 
     html+=f"<div class='card'><b>설계사 의견</b><br><br>{op}</div>"
+
+    # ✅ ⭐ 면책 문구 추가
+    html+=f"""
+    <div class="notice">
+    ※ 본 자료는 보험상품 가입을 권유하거나 자문을 제공하기 위한 것이 아닙니다.<br>
+    ※ 일반적인 기준에 따른 참고용 분석 자료이며, 계약 체결 여부는 고객님의 판단과 책임 하에 결정됩니다.<br>
+    ※ 실제 보장 내용은 보험약관 및 계약 내용에 따라 달라질 수 있습니다.
+    </div>
+    """
+
     html+="</body></html>"
     return html
 
@@ -227,7 +247,6 @@ def editor():
             with cols[i%3]:
                 user_values[item]=st.number_input(item,key=f"user_{item}_{idx}",value=d_user.get(item,0))
 
-    # ✅ 버튼 영역 복구
     colA, colB, colC = st.columns(3)
 
     with colA:
@@ -262,9 +281,7 @@ def editor():
             st.session_state.page="list"
             st.rerun()
 
-# =========================
 # 실행
-# =========================
 if not st.session_state.logged_in:
     login()
 else:

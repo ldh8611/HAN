@@ -83,14 +83,14 @@ def list_page():
                 st.rerun()
 
 # =========================
-# ⭐ 평가 (최종 수정)
+# 평가
 # =========================
 def check(u,s):
     if u == 0:
         return "✖"
     elif u >= s:
         return "●"
-    elif u > 0:   # 🔥 핵심: 0보다 크면 무조건 ▲
+    elif u > 0:
         return "▲"
 
 def img64(f):
@@ -227,20 +227,40 @@ def editor():
             with cols[i%3]:
                 user_values[item]=st.number_input(item,key=f"user_{item}_{idx}",value=d_user.get(item,0))
 
-    if st.button("📊 분석하기"):
-        results={}
-        for cat,items in categories.items():
-            results[cat]=[]
-            for item in items:
-                results[cat].append({
-                    "항목":item,
-                    "내 금액":user_values[item],
-                    "기준 금액":std_values[item],
-                    "적정도":check(user_values[item],std_values[item])
-                })
+    # ✅ 버튼 영역 복구
+    colA, colB, colC = st.columns(3)
 
-        html=make_html(results,name,birth,premium,opinion,img64(file))
-        st.download_button("📄 리포트 다운로드",html,"report.html")
+    with colA:
+        if st.button("💾 저장"):
+            new={"name":name,"birth":birth,"premium":premium,
+                 "data":user_values,"std":std_values,"opinion":opinion}
+            if idx is None:
+                data.append(new)
+            else:
+                data[idx]=new
+            save_data(uid,data)
+            st.success("저장 완료")
+
+    with colB:
+        if st.button("📊 분석하기"):
+            results={}
+            for cat,items in categories.items():
+                results[cat]=[]
+                for item in items:
+                    results[cat].append({
+                        "항목":item,
+                        "내 금액":user_values[item],
+                        "기준 금액":std_values[item],
+                        "적정도":check(user_values[item],std_values[item])
+                    })
+
+            html=make_html(results,name,birth,premium,opinion,img64(file))
+            st.download_button("📄 리포트 다운로드",html,"report.html")
+
+    with colC:
+        if st.button("📂 목록"):
+            st.session_state.page="list"
+            st.rerun()
 
 # =========================
 # 실행

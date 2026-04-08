@@ -83,19 +83,21 @@ def list_page():
                 st.rerun()
 
 # =========================
-# 평가
+# ⭐ 평가 (최종 수정)
 # =========================
 def check(u,s):
-    if u==0: return "✖"
-    elif u>=s: return "●"
-    elif u>=s*0.7: return "▲"
-    else: return "✖"
+    if u == 0:
+        return "✖"
+    elif u >= s:
+        return "●"
+    elif u > 0:   # 🔥 핵심: 0보다 크면 무조건 ▲
+        return "▲"
 
 def img64(f):
     return base64.b64encode(f.getvalue()).decode() if f else None
 
 # =========================
-# HTML (디자인 포함)
+# HTML
 # =========================
 def make_html(results,name,birth,premium,opinion,img):
 
@@ -206,24 +208,6 @@ def editor():
         "실손/기타": ["질병실비","상해실비","질병간병인일당","상해간병인일당","질병간호간병통합서비스 일당","상해간호간병통합서비스 일당","골절진단비","자동차사고부상치료비","교통사고처리지원금","벌금","변호사선임비","일상생활배상책임"]
     }
 
-    default_std = {
-        "일반사망":10000,"질병사망":10000,"상해사망":10000,
-        "상해후유장해":10000,"질병후유장해":3000,
-        "일반암진단비":5000,"유사암진단비":1000,
-        "뇌혈관진단비":2000,"뇌경색진단비":3000,"뇌출혈진단비":5000,
-        "허혈성심장질환진단비":2000,"급성심근경색진단비":5000,
-        "암주요치료비":2000,"뇌심 주요치료비":1000,
-        "질병수술비":50,"질병종수술비":1000,
-        "뇌혈관질환 수술비":1000,"심장질환 수술비":1000,
-        "상해수술비":100,"상해종수술비":1000,
-        "질병실비":5000,"상해실비":5000,
-        "질병간병인일당":1,"상해간병인일당":1,
-        "질병간호간병통합서비스 일당":7,"상해간호간병통합서비스 일당":7,
-        "골절진단비":50,"자동차사고부상치료비":30,
-        "교통사고처리지원금":20000,"벌금":3000,
-        "변호사선임비":3000,"일상생활배상책임":10000
-    }
-
     std_values={}
     user_values={}
 
@@ -233,7 +217,7 @@ def editor():
         cols=st.columns(3)
         for i,item in enumerate(items):
             with cols[i%3]:
-                std_values[item]=st.number_input(item,value=d_std.get(item,default_std[item]),key=f"std_{item}_{idx}")
+                std_values[item]=st.number_input(item,key=f"std_{item}_{idx}",value=d_std.get(item,0))
 
     st.header("📥 내 보장")
     for cat,items in categories.items():
@@ -241,14 +225,7 @@ def editor():
         cols=st.columns(3)
         for i,item in enumerate(items):
             with cols[i%3]:
-                user_values[item]=st.number_input(item,value=d_user.get(item,0),key=f"user_{item}_{idx}")
-
-    if st.button("💾 저장"):
-        new={"name":name,"birth":birth,"premium":premium,"data":user_values,"std":std_values,"opinion":opinion}
-        if idx is None: data.append(new)
-        else: data[idx]=new
-        save_data(uid,data)
-        st.success("저장 완료")
+                user_values[item]=st.number_input(item,key=f"user_{item}_{idx}",value=d_user.get(item,0))
 
     if st.button("📊 분석하기"):
         results={}
@@ -264,10 +241,6 @@ def editor():
 
         html=make_html(results,name,birth,premium,opinion,img64(file))
         st.download_button("📄 리포트 다운로드",html,"report.html")
-
-    if st.button("📂 목록"):
-        st.session_state.page="list"
-        st.rerun()
 
 # =========================
 # 실행

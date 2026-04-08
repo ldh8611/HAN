@@ -4,6 +4,14 @@ import json, os, base64
 st.set_page_config(layout="wide")
 
 # =========================
+# 🔐 허용된 사용자
+# =========================
+ALLOWED_USERS = [
+    "dlehdgus3","rlarufdl","rladuswl2","shehrbs",
+    "qkralwjd1","rlagmlwls2","didtjfl","dlaudrhks","dlawlsgh"
+]
+
+# =========================
 # 상태
 # =========================
 if "logged_in" not in st.session_state:
@@ -37,13 +45,13 @@ def login():
     pw=st.text_input("비밀번호",type="password")
 
     if st.button("로그인"):
-        if uid==pw and uid:
+        if uid in ALLOWED_USERS and uid == pw:
             st.session_state.logged_in=True
             st.session_state.user_id=uid
             st.session_state.page="list"
             st.rerun()
         else:
-            st.error("아이디와 비밀번호 동일")
+            st.error("허용되지 않은 계정이거나 비밀번호가 일치하지 않습니다")
 
 # =========================
 # 고객 목록
@@ -59,6 +67,10 @@ def list_page():
         st.rerun()
 
     st.divider()
+
+    if not data:
+        st.info("저장된 고객이 없습니다.")
+        return
 
     for i,c in enumerate(data):
         col1,col2=st.columns([4,1])
@@ -83,7 +95,7 @@ def img64(f):
     return base64.b64encode(f.getvalue()).decode() if f else None
 
 # =========================
-# HTML (디자인 완성)
+# HTML (디자인 포함)
 # =========================
 def make_html(results,name,birth,premium,opinion,img):
 
@@ -98,72 +110,18 @@ def make_html(results,name,birth,premium,opinion,img):
     <head>
     <meta charset="utf-8">
     <style>
+    body {{font-family:'Malgun Gothic';width:210mm;margin:auto;padding:20px;background:#f4f6f9}}
+    .card {{background:white;padding:15px;margin-bottom:10px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}}
+    .header {{display:flex;justify-content:space-between}}
+    .title {{font-size:24px;font-weight:bold}}
+    .summary span {{margin-right:10px;font-size:20px;font-weight:bold}}
+    .blue {{color:#007bff}} .orange {{color:#f0ad4e}} .red {{color:#d9534f}}
 
-    body {{
-        font-family: 'Malgun Gothic';
-        width:210mm;
-        margin:0 auto;
-        padding:20px;
-        background:#f4f6f9;
-    }}
-
-    .card {{
-        background:white;
-        padding:15px;
-        margin-bottom:10px;
-        border-radius:10px;
-        box-shadow:0 2px 6px rgba(0,0,0,0.05);
-    }}
-
-    .header {{
-        display:flex;
-        justify-content:space-between;
-    }}
-
-    .title {{
-        font-size:24px;
-        font-weight:bold;
-    }}
-
-    .summary span {{
-        margin-right:10px;
-        font-size:20px;
-        font-weight:bold;
-    }}
-
-    .blue {{color:#007bff}}
-    .orange {{color:#f0ad4e}}
-    .red {{color:#d9534f}}
-
-    table {{
-        width:100%;
-        border-collapse:collapse;
-        table-layout:fixed;
-        margin-top:10px;
-    }}
-
-    th, td {{
-        border:1px solid #ddd;
-        font-size:11px;
-        padding:4px;
-        text-align:center;
-        word-break:break-word;
-    }}
-
-    th {{
-        background:#eef2f7;
-    }}
-
-    .left {{
-        background:#f7f7f7;
-        font-weight:bold;
-    }}
-
-    img {{
-        width:150px;
-        border-radius:8px;
-    }}
-
+    table {{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}}
+    th, td {{border:1px solid #ddd;font-size:11px;padding:4px;text-align:center}}
+    th {{background:#eef2f7}}
+    .left {{background:#f7f7f7;font-weight:bold}}
+    img {{width:150px;border-radius:8px}}
     </style>
     </head>
 
@@ -179,19 +137,16 @@ def make_html(results,name,birth,premium,opinion,img):
                 <span class="red">✖ {b}</span>
             </div>
         </div>
-        <div>
-            {"<img src='data:image/png;base64,"+img+"'/>" if img else ""}
-        </div>
+        <div>{("<img src='data:image/png;base64,"+img+"'/>") if img else ""}</div>
     </div>
     """
 
     for cat,items in results.items():
-
         col_count=len(items)+1
-        col_width=100/col_count
+        width=100/col_count
 
         html+=f"<div class='card'><b>{cat}</b><table>"
-        html+="<colgroup>"+"".join([f"<col style='width:{col_width}%'>" for _ in range(col_count)])+"</colgroup>"
+        html+="<colgroup>"+"".join([f"<col style='width:{width}%'>" for _ in range(col_count)])+"</colgroup>"
 
         html+="<tr><th></th>"+"".join(f"<th>{r['항목']}</th>" for r in items)+"</tr>"
         html+="<tr><td class='left'>보장</td>"+"".join(f"<td>{r['내 금액']}</td>" for r in items)+"</tr>"
@@ -202,18 +157,12 @@ def make_html(results,name,birth,premium,opinion,img):
 
         html+="</table></div>"
 
-    html+=f"""
-    <div class="card">
-    <b>설계사 의견</b><br><br>
-    {op}
-    </div>
-    """
-
+    html+=f"<div class='card'><b>설계사 의견</b><br><br>{op}</div>"
     html+="</body></html>"
     return html
 
 # =========================
-# 메인 UI
+# 메인
 # =========================
 def editor():
 
@@ -243,7 +192,7 @@ def editor():
     with col1:
         name=st.text_input("고객명",name)
     with col2:
-        birth=st.text_input("생년월일",birth, placeholder="예: 900101")
+        birth=st.text_input("생년월일",birth)
     with col3:
         premium=st.number_input("월 보험료",value=premium)
 
@@ -321,7 +270,7 @@ def editor():
         st.rerun()
 
 # =========================
-# 라우팅
+# 실행
 # =========================
 if not st.session_state.logged_in:
     login()

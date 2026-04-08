@@ -1,133 +1,123 @@
 import streamlit as st
-import base64
+import json, os, base64
 
 st.set_page_config(layout="wide")
 
-st.title("📊 보험 보장 분석 리포트")
+# =========================
+# 상태
+# =========================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in=False
+if "page" not in st.session_state:
+    st.session_state.page="login"
+if "selected_customer" not in st.session_state:
+    st.session_state.selected_customer=None
 
-# 고객 정보
-col1, col2 = st.columns(2)
-with col1:
-    customer_name = st.text_input("고객명", "홍길동")
-with col2:
-    monthly_premium = st.number_input("월 보험료(원)", 0, value=200000)
+# =========================
+# 데이터
+# =========================
+def load_data(uid):
+    path=f"data/{uid}.json"
+    if os.path.exists(path):
+        return json.load(open(path,"r",encoding="utf-8"))
+    return []
 
-# 설계사 의견
-opinion = st.text_area("설계사 의견", "고객님께 필요한 보장 중심으로 보완을 권장드립니다.")
+def save_data(uid,data):
+    os.makedirs("data",exist_ok=True)
+    json.dump(data,open(f"data/{uid}.json","w",encoding="utf-8"),
+              ensure_ascii=False,indent=2)
 
-# 명함 업로드
-uploaded_file = st.file_uploader("명함 이미지 업로드", type=["png", "jpg", "jpeg"])
+# =========================
+# 로그인
+# =========================
+def login():
+    st.title("🔐 보험 분석 시스템")
 
-# 기준금액
-default_std = {
-    "일반사망":10000,"질병사망":10000,"상해사망":10000,
-    "상해후유장해":10000,"질병후유장해":3000,
+    uid=st.text_input("아이디")
+    pw=st.text_input("비밀번호",type="password")
 
-    "일반암진단비":5000,"유사암진단비":1000,
-    "뇌혈관진단비":2000,"뇌경색진단비":3000,"뇌출혈진단비":5000,
-    "허혈성심장질환진단비":2000,"급성심근경색진단비":5000,
+    if st.button("로그인"):
+        if uid==pw and uid:
+            st.session_state.logged_in=True
+            st.session_state.user_id=uid
+            st.session_state.page="list"
+            st.rerun()
+        else:
+            st.error("아이디와 비밀번호 동일")
 
-    "암주요치료비":2000,"뇌심 주요치료비":1000,
-    "질병수술비":50,"질병종수술비":1000,
-    "뇌혈관질환 수술비":1000,"심장질환 수술비":1000,
-    "상해수술비":100,"상해종수술비":1000,
+# =========================
+# 고객 목록
+# =========================
+def list_page():
+    st.title(f"📂 고객 목록 ({st.session_state.user_id})")
 
-    "질병실비":5000,"상해실비":5000,
+    data=load_data(st.session_state.user_id)
 
-    "질병간병인일당":1,"상해간병인일당":1,
-    "질병간호간병통합서비스 일당":7,"상해간호간병통합서비스 일당":7,
+    if st.button("➕ 신규 고객 등록"):
+        st.session_state.selected_customer=None
+        st.session_state.page="editor"
+        st.rerun()
 
-    "골절진단비":50,"자동차사고부상치료비":30,
-    "교통사고처리지원금":20000,"벌금":3000,
-    "변호사선임비":3000,"일상생활배상책임":10000
-}
+    st.divider()
 
-categories = {
-    "사망/장해": ["일반사망","질병사망","상해사망","상해후유장해","질병후유장해"],
-    "진단": [
-        "일반암진단비","유사암진단비",
-        "뇌혈관진단비","뇌경색진단비","뇌출혈진단비",
-        "허혈성심장질환진단비","급성심근경색진단비"
-    ],
-    "치료/수술": [
-        "암주요치료비","뇌심 주요치료비",
-        "질병수술비","질병종수술비",
-        "뇌혈관질환 수술비","심장질환 수술비",
-        "상해수술비","상해종수술비"
-    ],
-    "실손/기타": [
-        "질병실비","상해실비",
-        "질병간병인일당","상해간병인일당",
-        "질병간호간병통합서비스 일당","상해간호간병통합서비스 일당",
-        "골절진단비","자동차사고부상치료비",
-        "교통사고처리지원금","벌금","변호사선임비","일상생활배상책임"
-    ]
-}
+    for i,c in enumerate(data):
+        col1,col2=st.columns([4,1])
+        with col1:
+            st.write(f"👤 {c['name']} ({c.get('birth','')}) / {c['premium']:,}원")
+        with col2:
+            if st.button("열기",key=f"open{i}"):
+                st.session_state.selected_customer=i
+                st.session_state.page="editor"
+                st.rerun()
 
-std_values = {}
-user_values = {}
+# =========================
+# 평가
+# =========================
+def check(u,s):
+    if u==0: return "✖"
+    elif u>=s: return "●"
+    elif u>=s*0.7: return "▲"
+    else: return "✖"
 
-# 입력
-st.header("📥 기준금액 입력 (단위: 만원)")
-for cat, items in categories.items():
-    st.subheader(cat)
-    cols = st.columns(3)
-    for i, item in enumerate(items):
-        with cols[i % 3]:
-            std_values[item] = st.number_input(
-                item, 0, step=10,
-                value=default_std.get(item, 0),
-                key=f"std_{item}"
-            )
+def img64(f):
+    return base64.b64encode(f.getvalue()).decode() if f else None
 
-st.header("📥 내 보장 입력 (단위: 만원)")
-for cat, items in categories.items():
-    st.subheader(cat)
-    cols = st.columns(3)
-    for i, item in enumerate(items):
-        with cols[i % 3]:
-            user_values[item] = st.number_input(item, 0, step=10, key=f"user_{item}")
+# =========================
+# HTML (디자인 완성)
+# =========================
+def make_html(results,name,birth,premium,opinion,img):
 
-def check(user, std):
-    if user == 0:
-        return "✖"
-    elif user >= std:
-        return "●"
-    else:
-        return "▲"
+    op=opinion.replace("\n","<br>")
+    all_items=sum(results.values(),[])
+    g=sum(1 for r in all_items if r["적정도"]=="●")
+    m=sum(1 for r in all_items if r["적정도"]=="▲")
+    b=sum(1 for r in all_items if r["적정도"]=="✖")
 
-def image_to_base64(uploaded_file):
-    if uploaded_file:
-        return base64.b64encode(uploaded_file.read()).decode()
-    return None
-
-def generate_html(results_by_cat, name, premium, opinion, image_base64):
-
-    formatted_opinion = opinion.replace("\n", "<br>")
-
-    all_items = sum(results_by_cat.values(), [])
-    good = sum(1 for r in all_items if r["적정도"]=="●")
-    mid = sum(1 for r in all_items if r["적정도"]=="▲")
-    bad = sum(1 for r in all_items if r["적정도"]=="✖")
-
-    html = f"""
+    html=f"""
     <html>
     <head>
     <meta charset="utf-8">
     <style>
+
     body {{
-        font-family:'Malgun Gothic';
+        font-family: 'Malgun Gothic';
         width:210mm;
-        height:297mm;
         margin:0 auto;
         padding:20px;
-        box-sizing:border-box;
+        background:#f4f6f9;
     }}
 
-    .header-wrap {{
+    .card {{
+        background:white;
+        padding:15px;
+        margin-bottom:10px;
+        border-radius:10px;
+        box-shadow:0 2px 6px rgba(0,0,0,0.05);
+    }}
+
+    .header {{
         display:flex;
         justify-content:space-between;
-        align-items:flex-start;
     }}
 
     .title {{
@@ -135,126 +125,208 @@ def generate_html(results_by_cat, name, premium, opinion, image_base64):
         font-weight:bold;
     }}
 
-    .summary {{
-        font-size:22px;
+    .summary span {{
+        margin-right:10px;
+        font-size:20px;
         font-weight:bold;
-        margin-top:5px;
-        margin-bottom:10px;
     }}
 
-    .blue {{ color:#007bff; }}
-    .orange {{ color:#f0ad4e; }}
-    .red {{ color:#d9534f; }}
-
-    .header-right img {{
-        width:160px;
-        border:1px solid #ccc;
-        padding:3px;
-    }}
-
-    .header {{
-        background:#bfe3e6;
-        padding:6px;
-        font-weight:bold;
-        margin-top:8px;
-    }}
+    .blue {{color:#007bff}}
+    .orange {{color:#f0ad4e}}
+    .red {{color:#d9534f}}
 
     table {{
         width:100%;
         border-collapse:collapse;
         table-layout:fixed;
-        margin-bottom:5px;
+        margin-top:10px;
     }}
 
     th, td {{
-        border:1px solid #ccc;
+        border:1px solid #ddd;
         font-size:11px;
-        text-align:center;
         padding:4px;
+        text-align:center;
+        word-break:break-word;
+    }}
+
+    th {{
+        background:#eef2f7;
     }}
 
     .left {{
-        background:#f0f0f0;
+        background:#f7f7f7;
         font-weight:bold;
     }}
 
-    .opinion {{
-        border:1px solid #ccc;
-        padding:10px;
-        margin-top:10px;
-        line-height:1.6;
+    img {{
+        width:150px;
+        border-radius:8px;
     }}
+
     </style>
     </head>
 
     <body>
 
-    <div class="header-wrap">
-
+    <div class="card header">
         <div>
-            <div class="title">한장으로 보는 보장현황</div>
-            <div>{name} / 월보험료 {premium:,}원 (단위: 만원)</div>
-
+            <div class="title">보험 보장 분석 리포트</div>
+            <div>{name} ({birth}) / 월보험료 {premium:,}원</div>
             <div class="summary">
-                <span class="blue">● {good}</span>
-                <span class="orange">▲ {mid}</span>
-                <span class="red">✖ {bad}</span>
+                <span class="blue">● {g}</span>
+                <span class="orange">▲ {m}</span>
+                <span class="red">✖ {b}</span>
             </div>
         </div>
-
-        <div class="header-right">
-    """
-
-    if image_base64:
-        html += f"<img src='data:image/png;base64,{image_base64}'/>"
-
-    html += "</div></div>"
-
-    for cat, items in results_by_cat.items():
-
-        html += f"<div class='header'>{cat}</div><table>"
-
-        html += "<tr><th></th>" + "".join([f"<th>{r['항목']}</th>" for r in items]) + "</tr>"
-        html += "<tr><td class='left'>보장</td>" + "".join([f"<td>{r['내 금액']:,}</td>" for r in items]) + "</tr>"
-        html += "<tr><td class='left'>기준금액</td>" + "".join([f"<td>{r['기준 금액']:,}</td>" for r in items]) + "</tr>"
-        html += "<tr><td class='left'>적정도</td>" + "".join([
-            f"<td style='color:{'#007bff' if r['적정도']=='●' else '#f0ad4e' if r['적정도']=='▲' else '#d9534f'}; font-size:18px; font-weight:bold'>{r['적정도']}</td>"
-            for r in items]) + "</tr>"
-
-        html += "</table>"
-
-        if cat == "실손/기타":
-            html += "<div style='font-size:10px;'>※ 기준금액은 현재 나이에 필요한 권장 보장금액입니다 (단위: 만원)</div>"
-
-    html += f"""
-    <div class="opinion">
-    <b>설계사 의견</b><br><br>
-    {formatted_opinion}
+        <div>
+            {"<img src='data:image/png;base64,"+img+"'/>" if img else ""}
+        </div>
     </div>
     """
 
-    html += "</body></html>"
+    for cat,items in results.items():
 
+        col_count=len(items)+1
+        col_width=100/col_count
+
+        html+=f"<div class='card'><b>{cat}</b><table>"
+        html+="<colgroup>"+"".join([f"<col style='width:{col_width}%'>" for _ in range(col_count)])+"</colgroup>"
+
+        html+="<tr><th></th>"+"".join(f"<th>{r['항목']}</th>" for r in items)+"</tr>"
+        html+="<tr><td class='left'>보장</td>"+"".join(f"<td>{r['내 금액']}</td>" for r in items)+"</tr>"
+        html+="<tr><td class='left'>기준</td>"+"".join(f"<td>{r['기준 금액']}</td>" for r in items)+"</tr>"
+        html+="<tr><td class='left'>평가</td>"+"".join(
+            f"<td style='color:{'#007bff' if r['적정도']=='●' else '#f0ad4e' if r['적정도']=='▲' else '#d9534f'};font-weight:bold'>{r['적정도']}</td>"
+            for r in items)+"</tr>"
+
+        html+="</table></div>"
+
+    html+=f"""
+    <div class="card">
+    <b>설계사 의견</b><br><br>
+    {op}
+    </div>
+    """
+
+    html+="</body></html>"
     return html
 
-# 실행
-if st.button("📊 분석하기"):
+# =========================
+# 메인 UI
+# =========================
+def editor():
 
-    results_by_cat = {}
+    st.title("📊 보험 보장 분석 리포트")
 
-    for cat, items in categories.items():
-        results_by_cat[cat] = []
-        for item in items:
-            results_by_cat[cat].append({
-                "항목":item,
-                "내 금액":user_values[item],
-                "기준 금액":std_values[item],
-                "적정도":check(user_values[item], std_values[item])
-            })
+    uid=st.session_state.user_id
+    data=load_data(uid)
+    idx=st.session_state.selected_customer
 
-    img_base64 = image_to_base64(uploaded_file)
-    html = generate_html(results_by_cat, customer_name, monthly_premium, opinion, img_base64)
+    if idx is not None:
+        c=data[idx]
+        d_user=c["data"]
+        d_std=c["std"]
+        name=c["name"]
+        birth=c.get("birth","")
+        premium=c["premium"]
+        opinion=c.get("opinion","")
+    else:
+        d_user={}
+        d_std={}
+        name=""
+        birth=""
+        premium=0
+        opinion=""
 
-    st.download_button("📄 리포트 다운로드", html, file_name="보험보장리포트.html")
+    col1,col2,col3=st.columns(3)
+    with col1:
+        name=st.text_input("고객명",name)
+    with col2:
+        birth=st.text_input("생년월일",birth, placeholder="예: 900101")
+    with col3:
+        premium=st.number_input("월 보험료",value=premium)
 
-    st.success("다운로드 후 Ctrl+P → PDF 저장하시면 완성입니다 👍")
+    opinion=st.text_area("설계사 의견",opinion)
+    file=st.file_uploader("명함",type=["png","jpg"])
+
+    categories = {
+        "사망/장해": ["일반사망","질병사망","상해사망","상해후유장해","질병후유장해"],
+        "진단": ["일반암진단비","유사암진단비","뇌혈관진단비","뇌경색진단비","뇌출혈진단비","허혈성심장질환진단비","급성심근경색진단비"],
+        "치료/수술": ["암주요치료비","뇌심 주요치료비","질병수술비","질병종수술비","뇌혈관질환 수술비","심장질환 수술비","상해수술비","상해종수술비"],
+        "실손/기타": ["질병실비","상해실비","질병간병인일당","상해간병인일당","질병간호간병통합서비스 일당","상해간호간병통합서비스 일당","골절진단비","자동차사고부상치료비","교통사고처리지원금","벌금","변호사선임비","일상생활배상책임"]
+    }
+
+    default_std = {
+        "일반사망":10000,"질병사망":10000,"상해사망":10000,
+        "상해후유장해":10000,"질병후유장해":3000,
+        "일반암진단비":5000,"유사암진단비":1000,
+        "뇌혈관진단비":2000,"뇌경색진단비":3000,"뇌출혈진단비":5000,
+        "허혈성심장질환진단비":2000,"급성심근경색진단비":5000,
+        "암주요치료비":2000,"뇌심 주요치료비":1000,
+        "질병수술비":50,"질병종수술비":1000,
+        "뇌혈관질환 수술비":1000,"심장질환 수술비":1000,
+        "상해수술비":100,"상해종수술비":1000,
+        "질병실비":5000,"상해실비":5000,
+        "질병간병인일당":1,"상해간병인일당":1,
+        "질병간호간병통합서비스 일당":7,"상해간호간병통합서비스 일당":7,
+        "골절진단비":50,"자동차사고부상치료비":30,
+        "교통사고처리지원금":20000,"벌금":3000,
+        "변호사선임비":3000,"일상생활배상책임":10000
+    }
+
+    std_values={}
+    user_values={}
+
+    st.header("📥 기준금액")
+    for cat,items in categories.items():
+        st.subheader(cat)
+        cols=st.columns(3)
+        for i,item in enumerate(items):
+            with cols[i%3]:
+                std_values[item]=st.number_input(item,value=d_std.get(item,default_std[item]),key=f"std_{item}_{idx}")
+
+    st.header("📥 내 보장")
+    for cat,items in categories.items():
+        st.subheader(cat)
+        cols=st.columns(3)
+        for i,item in enumerate(items):
+            with cols[i%3]:
+                user_values[item]=st.number_input(item,value=d_user.get(item,0),key=f"user_{item}_{idx}")
+
+    if st.button("💾 저장"):
+        new={"name":name,"birth":birth,"premium":premium,"data":user_values,"std":std_values,"opinion":opinion}
+        if idx is None: data.append(new)
+        else: data[idx]=new
+        save_data(uid,data)
+        st.success("저장 완료")
+
+    if st.button("📊 분석하기"):
+        results={}
+        for cat,items in categories.items():
+            results[cat]=[]
+            for item in items:
+                results[cat].append({
+                    "항목":item,
+                    "내 금액":user_values[item],
+                    "기준 금액":std_values[item],
+                    "적정도":check(user_values[item],std_values[item])
+                })
+
+        html=make_html(results,name,birth,premium,opinion,img64(file))
+        st.download_button("📄 리포트 다운로드",html,"report.html")
+
+    if st.button("📂 목록"):
+        st.session_state.page="list"
+        st.rerun()
+
+# =========================
+# 라우팅
+# =========================
+if not st.session_state.logged_in:
+    login()
+else:
+    if st.session_state.page=="list":
+        list_page()
+    else:
+        editor()

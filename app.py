@@ -12,6 +12,44 @@ ALLOWED_USERS = [
 ]
 
 # =========================
+# ⭐ 디폴트 기준값 (복구)
+# =========================
+DEFAULT_STD = {
+    "일반사망": 10000,
+    "질병사망": 10000,
+    "상해사망": 10000,
+    "상해후유장해": 10000,
+    "질병후유장해": 3000,
+    "일반암진단비": 5000,
+    "유사암진단비": 1000,
+    "뇌혈관진단비": 2000,
+    "뇌경색진단비": 3000,
+    "뇌출혈진단비": 5000,
+    "허혈성심장질환진단비": 2000,
+    "급성심근경색진단비": 5000,
+    "암주요치료비": 2000,
+    "뇌심 주요치료비": 1000,
+    "질병수술비": 50,
+    "질병종수술비": 1000,
+    "뇌혈관질환 수술비": 1000,
+    "심장질환 수술비": 1000,
+    "상해수술비": 100,
+    "상해종수술비": 1000,
+    "질병실비": 5000,
+    "상해실비": 5000,
+    "질병간병인일당": 1,
+    "상해간병인일당": 1,
+    "질병간호간병통합서비스 일당": 7,
+    "상해간호간병통합서비스 일당": 7,
+    "골절진단비": 50,
+    "자동차사고부상치료비": 30,
+    "교통사고처리지원금": 20000,
+    "벌금": 3000,
+    "변호사선임비": 3000,
+    "일상생활배상책임": 10000
+}
+
+# =========================
 # 상태
 # =========================
 if "logged_in" not in st.session_state:
@@ -97,7 +135,7 @@ def img64(f):
     return base64.b64encode(f.getvalue()).decode() if f else None
 
 # =========================
-# HTML
+# HTML 생성
 # =========================
 def make_html(results,name,birth,premium,opinion,img):
 
@@ -171,12 +209,10 @@ def make_html(results,name,birth,premium,opinion,img):
 
     html+=f"<div class='card'><b>설계사 의견</b><br><br>{op}</div>"
 
-    # ✅ ⭐ 면책 문구 추가
     html+=f"""
     <div class="notice">
-    ※ 본 자료는 보험상품 가입을 권유하거나 자문을 제공하기 위한 것이 아닙니다.<br>
-    ※ 일반적인 기준에 따른 참고용 분석 자료이며, 계약 체결 여부는 고객님의 판단과 책임 하에 결정됩니다.<br>
-    ※ 실제 보장 내용은 보험약관 및 계약 내용에 따라 달라질 수 있습니다.
+    ※ 본 자료는 참고용 분석 자료입니다.<br>
+    ※ 실제 보장 내용은 보험약관에 따라 달라질 수 있습니다.
     </div>
     """
 
@@ -237,7 +273,11 @@ def editor():
         cols=st.columns(3)
         for i,item in enumerate(items):
             with cols[i%3]:
-                std_values[item]=st.number_input(item,key=f"std_{item}_{idx}",value=d_std.get(item,0))
+                std_values[item]=st.number_input(
+                    item,
+                    key=f"std_{item}_{idx if idx is not None else 'new'}",
+                    value=d_std.get(item, DEFAULT_STD[item])
+                )
 
     st.header("📥 내 보장")
     for cat,items in categories.items():
@@ -245,7 +285,11 @@ def editor():
         cols=st.columns(3)
         for i,item in enumerate(items):
             with cols[i%3]:
-                user_values[item]=st.number_input(item,key=f"user_{item}_{idx}",value=d_user.get(item,0))
+                user_values[item]=st.number_input(
+                    item,
+                    key=f"user_{item}_{idx if idx is not None else 'new'}",
+                    value=d_user.get(item,0)
+                )
 
     colA, colB, colC = st.columns(3)
 
